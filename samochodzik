@@ -1,0 +1,536 @@
+                     
+                      ///////////////////////////////////////////
+                      //              Projekt                  //
+                      //    Zdalnie sterowany samochodzik      //
+                      //            Adrian Wlizło              //
+                      ///////////////////////////////////////////
+                      
+#include <SoftwareSerial.h>
+#include "DHT.h"          // biblioteka DHT 
+#define DHTPIN 3          // numer pinu sygnałowego
+SoftwareSerial HM10(9, 10); // RX = 9, TX = 10
+char appData;  
+String inData = "";
+
+int pred2;
+int pred3 = 50;
+int pred4;
+int skret= 0;
+bool petla = true;
+int opis= 0;
+int odleg = 10;
+
+String war;
+int grr;
+int wartosc;
+
+int czujnik = A3;   //pin analogowy A1 połączony z nóżką fotorezystora
+
+int ostatnia = 11;
+int Trig = A4;  //pin 2 Arduino połączony z pinem Trigger czujnika
+int Echo = A5;  //pin 3 Arduino połączony z pinem Echo czujnika
+int CM;        //odległość w cm
+long CZAS;     //długość powrotnego impulsu w uS
+
+const int wsteczny = A0;
+const int swiatla_przod = A2;
+const int swiatla_tyl = A1;
+const int kierunkowskaz_lewy = 13;
+const int kierunkowskaz_prawy = 2;
+
+DHT dht;
+
+const int E2 = 11;///Przypisanie numerów pinów do ziennych. Ustawianie prędkości.
+const int E3 = 5; ///
+
+const int M2 = 12; ///Przypisanie numerów pinów do ziennych. Ustawianie kierunku obrotu kół.
+const int M3 = 8; ///Kierunek
+
+void M2_advance(char Speed) ///Jazda prosto
+{
+ digitalWrite(M2,LOW);
+ analogWrite(E2,Speed);
+}
+void M3_advance(char Speed) ///
+{
+ digitalWrite(M3,HIGH);
+ analogWrite(E3,Speed);
+}
+
+
+
+void M2_back(char Speed) ///Tył
+{
+ digitalWrite(M2,HIGH);
+ analogWrite(E2,Speed);
+}
+void M3_back(char Speed) ///
+{
+ digitalWrite(M3,LOW);
+ analogWrite(E3,Speed);
+}
+
+
+
+void M2_left(char Speed) ///Lewo
+{
+ digitalWrite(M2,LOW);
+ analogWrite(E2,Speed);
+}
+void M3_left(char Speed) ///Lewo
+{
+ digitalWrite(M3,LOW);
+ analogWrite(E3,Speed);
+}
+
+
+
+void M2_right(char Speed) ///Prawo
+{
+ digitalWrite(M2,HIGH);
+ analogWrite(E2,Speed);
+}
+void M3_right(char Speed) ///Prawo
+{
+ digitalWrite(M3,HIGH);
+ analogWrite(E3,Speed);
+}
+
+
+
+void M2_Bleft(char Speed) ///Tyl Lewo
+{
+ digitalWrite(M2,HIGH);
+ analogWrite(E2,Speed);
+}
+void M3_Bleft(char Speed) ///Tyl Lewo
+{
+ digitalWrite(M3,HIGH);
+ analogWrite(E3,Speed);
+}
+
+
+
+void M2_Bright(char Speed) ///Tyl Prawo
+{
+ digitalWrite(M2,LOW);
+ analogWrite(E2,Speed);
+}
+void M3_Bright(char Speed) ///Tyl Prawo
+{
+ digitalWrite(M3,LOW);
+ analogWrite(E3,Speed);
+}
+
+
+void setup() {
+  Serial.begin(9600);
+  Serial.println("HM10 serial started at 9600");
+  HM10.begin(9600);                           // set HM10 serial at 9600 baud rate
+  pinMode(Trig, OUTPUT);                      //ustawienie pinu A4 w Arduino jako wyjście
+  pinMode(Echo, INPUT);                       //ustawienie pinu A5 w Arduino jako wejście
+
+  pinMode(5,OUTPUT);
+  pinMode(8,OUTPUT);
+  pinMode(11,OUTPUT);
+  pinMode(12,OUTPUT);
+    
+   pinMode(swiatla_przod, OUTPUT);
+   pinMode(swiatla_tyl, OUTPUT);
+   pinMode(wsteczny, OUTPUT);
+   pinMode(kierunkowskaz_lewy, OUTPUT);
+   pinMode(kierunkowskaz_prawy, OUTPUT);
+   digitalWrite(swiatla_przod, HIGH);
+   digitalWrite(swiatla_tyl, HIGH);
+   digitalWrite(wsteczny, LOW);
+   digitalWrite(kierunkowskaz_lewy, LOW);
+   digitalWrite(kierunkowskaz_prawy, LOW); 
+
+   dht.setup(DHTPIN);
+}
+
+//------------------------------------------------------------------------------------------STEROWANIE-----GLOWNY PROGRAM------------------------------------------------------------
+void loop() {
+
+  
+  HM10.listen(); 
+  while (HM10.available() > 0) {    //sprawdzenie, jeśli czujnik odbierze jakiś sygnał z telefonu  to przejdzie dalej
+    appData = HM10.read();          //przekazanie do zmiennej odczytanej wartości z czujnika
+    inData = String(appData);       
+    HM10.write(Serial.read());
+    Serial.write(appData);
+  }
+  if (Serial.available()) {           
+    delay(10);
+    HM10.write(Serial.read()); 
+  }
+  
+ 
+  if ( inData == "P") {            //jeśli czujnik otrzyma znak "P" to przejdzie do wykonania poniższego programu
+    Serial.println("prosto");
+    Serial.println(pred3);
+    digitalWrite(wsteczny, LOW);
+    digitalWrite(kierunkowskaz_lewy, LOW);
+    digitalWrite(kierunkowskaz_prawy, LOW); 
+    
+    M2_advance(pred3);
+    M3_advance(pred3);
+      
+  }  
+  
+  if ( inData == "T") {
+    Serial.println("tyl");
+    if(pred3==0){
+      digitalWrite(wsteczny, LOW);
+      digitalWrite(kierunkowskaz_lewy, LOW);
+      digitalWrite(kierunkowskaz_prawy, LOW);
+    }
+    else{
+      digitalWrite(wsteczny, HIGH);
+      digitalWrite(kierunkowskaz_lewy, LOW);
+      digitalWrite(kierunkowskaz_prawy, LOW);
+    }  
+    
+    M2_back(pred3);
+    M3_back(pred3);
+    
+  }
+    
+  if ( inData == "L") {
+    Serial.println("lewo");
+    if(skret==0){
+      pred4 = pred3/2;
+      pred4 = pred4+pred4/2;
+      skret=1;
+    }
+    if(pred3==0){
+      digitalWrite(kierunkowskaz_lewy, LOW);
+      digitalWrite(wsteczny, LOW);
+      pred4 = 0;
+      }
+    else{
+      digitalWrite(kierunkowskaz_lewy, HIGH);
+      digitalWrite(wsteczny, LOW);
+    }   
+    
+    M2_left(pred3);
+    M3_left(pred4);
+    
+  }
+  
+  if ( inData == "R") {
+    Serial.println("prawo");
+    if(skret==0){
+      pred4 = pred3/2;
+      skret=1;
+    }
+    if(pred3==0){
+      digitalWrite(kierunkowskaz_prawy, LOW);
+      digitalWrite(wsteczny, LOW);
+      pred4 = 0;
+    }
+    else{
+      digitalWrite(kierunkowskaz_prawy, HIGH);
+      digitalWrite(wsteczny, LOW);
+    }   
+    
+    M2_right(pred4);
+    M3_right(pred3);
+     
+  }
+  
+  if ( inData == "B") {
+    Serial.println("chamuj");
+    digitalWrite(wsteczny, LOW);
+    digitalWrite(kierunkowskaz_lewy, LOW);
+    digitalWrite(kierunkowskaz_prawy, LOW);
+    
+    M2_advance(0);
+    M3_advance(0);
+      
+  }
+
+  if ( inData == "O") {
+    pred3 = pred2;
+    digitalWrite(swiatla_przod, HIGH);
+    digitalWrite(swiatla_tyl, HIGH);
+  }
+  
+  if ( inData == "F") {
+    if(pred3>0){
+      pred2 = pred3;
+      pred3 = 0;
+    }
+    digitalWrite(swiatla_przod, LOW);
+    digitalWrite(swiatla_tyl, LOW);
+  }
+  
+  if ( inData == "M") {
+    menu();
+  }
+}
+
+//---------------------------------------------------------------------------WZORZEC-PROJEKTOWY-STRATEGY------------------------------------------------------------------
+class Pomiar {
+public:
+  virtual double WynikPomiaru(int *wartosc)=0;
+};
+//-----------------------------------------------------------------------SWIATLO-------------------------------------------------
+class PomiarSwiatla :public Pomiar{
+public:
+    double WynikPomiaru(int *wartosc){   
+    grr = wartosc;                                   
+    String war=String(grr);
+    HM10.write("\n");
+    HM10.write("Natezenie swiatla:   ");
+    Serial.print("Natezenie swiatla:   ");
+    Serial.println(war);
+    blueSend(war);
+    HM10.write("\n");       
+    }
+};
+//-----------------------------------------------------------------------TEMPERATURA-------------------------------------------------
+class PomiarTemperatury :public Pomiar{
+public:
+    double WynikPomiaru(int *wartosc){                                      
+    grr = wartosc;                                   
+    String war=String(grr);
+    HM10.write("\n");
+    HM10.write("Temperatura:   ");
+    Serial.print("Temperatura:   ");
+    Serial.println(war);
+    blueSend(war);
+    HM10.write("*C \n");    
+    }
+};
+//-----------------------------------------------------------------------WILGOC-------------------------------------------------
+class PomiarWilgoci :public Pomiar{
+public:
+    double WynikPomiaru(int *wartosc){                                      
+    grr = wartosc;                                   
+    String war=String(grr);
+    HM10.write("\n");
+    HM10.write("Wilgotnosc:   ");
+    Serial.print("Wilgotnosc:   ");
+    Serial.println(war);
+    blueSend(war);
+    HM10.write("% \n")  ;   
+    }
+};
+class Wybor{
+protected:
+    Pomiar *po;
+public:
+    Wybor(Pomiar *po, int *wartosc){
+        this->po = po;
+        po->WynikPomiaru(wartosc);
+  }             
+};
+
+//------------------------------------------------------------------------MENU----------------------------------
+void menu (){
+  while(petla){
+    delay(dht.getMinimumSamplingPeriod());
+    int t = dht.getTemperature();// Odczyt temperatury 
+    int h = dht.getHumidity();// Odczyt wilgotności powietrza
+    int wa = analogRead(czujnik);//odczytanie wartości z A1 
+    HM10.listen(); 
+    while (HM10.available() > 0) {   
+      appData = HM10.read();
+      inData = String(appData);  
+      HM10.write(Serial.read());
+      Serial.write(appData);
+    }
+    if (Serial.available()) {           
+      delay(10);
+      HM10.write(Serial.read()); 
+    }
+    if(opis==0){
+      HM10.write("\n");
+      HM10.write("wybierz \n");
+      HM10.write("1 predkosc \n");
+      HM10.write("2 temperatura \n"); 
+      HM10.write("3 natezenie swiatla \n");
+      HM10.write("4 wilgocd \n");
+      HM10.write("A automat \n");
+      HM10.write("strzalka cofnij \n");
+      opis=1;
+    }
+    if ( inData == "1") {
+      predkosc();
+    }
+    if ( inData == "2") {
+      wartosc = t;
+      Pomiar *po = new PomiarTemperatury;
+      Wybor wyb(po, wartosc);
+    }
+    if ( inData == "3") {
+      wartosc = wa;
+      Pomiar *po = new PomiarSwiatla;
+      Wybor wyb(po, wartosc);
+    }
+    if ( inData == "4") {
+      automat();
+    }
+    if ( inData == "5") {
+      wartosc = h;
+      Pomiar *po = new PomiarWilgoci;
+      Wybor wyb(po, wartosc);
+    }
+    if ( inData == "B") {
+      opis=0;
+      return 0;
+    }
+  }
+}
+
+//------------------------------------------------------------------------------------PREDKOSC------------------------
+
+void predkosc (){
+  while(petla){
+    HM10.listen(); 
+    while (HM10.available() > 0) {       
+      inData = HM10.readStringUntil('\n');
+      if(inData != "B"){   
+        pred3 = inData.toInt();
+        HM10.write(Serial.read());
+        
+        Serial.write(pred3);
+        Serial.println(pred3);
+        
+        opis=0;
+        skret=0;
+        HM10.write("gotowe");
+        return 0;
+      }
+      else{ 
+      HM10.write(Serial.read());
+      }  
+    }
+    if (Serial.available()) {           
+      delay(10);
+      HM10.write(Serial.read()); 
+    }
+    if ( inData == "B") {
+      opis=0;
+      return 0;
+    }
+  }
+}
+//----------------------------------------------------------------------AUTOMAT-------------------------
+void automat (){
+  odleg = pred3/2;
+  if(odleg>50){
+    odleg=50;
+  }
+  int randomowa;
+  HM10.listen(); 
+  while (HM10.available() > 0) {   
+    appData = HM10.read();
+    inData = String(appData);  
+    HM10.write(Serial.read());
+    Serial.write(appData);
+  }
+  if (Serial.available()) {           
+    delay(10);
+    HM10.write(Serial.read()); 
+  }
+    
+  pomiar_odleglosci();
+  if(CM == 0){
+    pomiar_odleglosci();
+  }
+   if(CM<=odleg  && CM>=0){
+      if(ostatnia<=odleg){
+        randomowa = rand() % 100;
+        if(skret==0){
+          pred4 = pred3/2;
+          skret=1;
+        }
+        if(randomowa>50){
+          digitalWrite(kierunkowskaz_lewy, LOW);  
+          digitalWrite(kierunkowskaz_prawy, HIGH); 
+          
+          M2_Bright(pred4);
+          M3_Bright(pred3);
+          
+          delay(2500);
+        }
+        else{
+          digitalWrite(kierunkowskaz_prawy, LOW); 
+          digitalWrite(kierunkowskaz_lewy, HIGH);   
+          
+          M2_Bleft(pred3);
+          M3_Bleft(pred4);
+          
+          delay(2500);
+        }
+      }
+    }
+    else{
+      Serial.println("prosto");
+      Serial.println(CM);
+      Serial.println(ostatnia);
+      ostatnia=CM;
+      Serial.println(pred3);
+      digitalWrite(wsteczny, LOW);
+      digitalWrite(kierunkowskaz_lewy, LOW);
+      digitalWrite(kierunkowskaz_prawy, LOW); 
+     
+      M2_advance(pred3);
+      M3_advance(pred3);
+      
+      
+    }    
+  
+  if ( inData == "O") {
+    pred3 = pred2;
+    digitalWrite(swiatla_przod, HIGH);
+    digitalWrite(swiatla_tyl, HIGH);
+  }
+  
+  if ( inData == "F") {
+    if(pred3>0){
+      pred2 = pred3;
+      pred3 = 0;
+    }
+    digitalWrite(swiatla_przod, LOW);
+    digitalWrite(swiatla_tyl, LOW);
+  }
+  if ( inData == "B") {
+    opis=0;
+    return 0;
+  }
+  if ( inData == "M") {
+    menu();
+  }
+}
+
+//--------------------------------------------------------------------------------------POMIAR-ODLEGLOSCI--------------------------------
+void pomiar_odleglosci(){
+  digitalWrite(Trig, LOW);        //ustawienie stanu wysokiego na 2 uS - impuls inicjalizujacy - z dokumentacji
+  delayMicroseconds(2);
+  digitalWrite(Trig, HIGH);       //ustawienie stanu wysokiego na 10 uS - impuls inicjalizujacy - z dokumentacji
+  delayMicroseconds(15);
+  digitalWrite(Trig, LOW);
+  digitalWrite(Echo, HIGH); 
+  CZAS = pulseIn(Echo, HIGH);     //przypianie do zmiennej czas szerokości odbitego impulsu
+  CM = CZAS / 58;                 //szerokość odbitego impulsu w uS podzielone przez 58 to odleglosc w cm - z dokumentacji          
+  Serial.print("Odleglosc: ");    //wyświetlanie wyników na ekranie
+  Serial.print(CM);
+  Serial.println(" cm");
+  if(CM>0){                       //sprawdzenie czy otrzymana odległość nie jest równa 0,
+    ostatnia=CM;                  //jeśli nie jest równa 0 to przypisanie wartości do zmiennej
+  }
+}
+
+//--------------------------------------------------------------------------------------WSYŁANIE-DO-ARDUINO--------------------------------------------
+void blueSend (String data) 
+{ 
+  int i; int data_length = data.length(); 
+ //Serial.println(data); //podgląd wysyłanych
+ for (i = 0; i < data_length; i++)
+ {
+ HM10.print(data.charAt(i)); 
+ }
+}
