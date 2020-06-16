@@ -17,7 +17,7 @@ Dokumentacja znajduje się na mojej stronie AWWebArd
 [Repozytorium](https://github.com/adrian-wlizlo/ProjektArduino)
 
 # Cel projektu
-Celem projektu było stworzenie zdalnie sterowanego samochodzika Arduino za pomocą aplikacjimobilnej. Samochodzik miał mierzyć temperature, wilgotność oraz natężenie światła panujące w po-mieszczeniu w którym się znajduje. Dodatkowo posiada opcje włączenie automatycznej jazdy, czylisamochodzik sam jeździ i w momencie wykrycia przeszkody skręca losowo w lewo lub prawo.
+Celem projektu było stworzenie zdalnie sterowanego samochodzika Arduino za pomocą aplikacji mobilnej. Samochodzik miał mierzyć temperature, wilgotność oraz natężenie światła panujące w po mieszczeniu w którym się znajduje. Dodatkowo posiada opcje włączenie automatycznej jazdy, czyli samochodzik sam jeździ i w momencie wykrycia przeszkody skręca losowo w lewo lub prawo.
 
 # Wykorzystane elementy
 Wykorzystane elementy do stworzenia projektu:
